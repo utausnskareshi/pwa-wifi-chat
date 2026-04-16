@@ -1,0 +1,21 @@
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# エディタ・IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code ローカル開発設定
+.claude/
+
+# Node.js（将来の開発用）
+node_modules/
+package-lock.json
+
+# ログ
+*.log
