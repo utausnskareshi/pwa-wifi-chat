@@ -1,0 +1,690 @@
+/* =====================================================================
+ * WiFi Chat - スタイルシート
+ *
+ * 設計方針:
+ *   - iPhone Safari に最適化したモバイルファーストデザイン
+ *   - CSS カスタムプロパティ（変数）でテーマ色を一元管理
+ *   - Safe Area（ノッチ・ホームバー）に対応した余白設定
+ *   - ダークモード（prefers-color-scheme: dark）対応
+ *   - タップ時のフィードバックアニメーション付き
+ * ===================================================================== */
+
+/* =====================================================================
+ * リセット & 基本設定
+ * ===================================================================== */
+
+/* 全要素のマージン・パディングをリセットし、border-box モデルに統一 */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* =====================================================================
+ * CSS カスタムプロパティ（テーマ変数）
+ * ライトモード用の値を定義。ダークモードは末尾の @media で上書き。
+ * ===================================================================== */
+:root {
+  --primary: #667eea;          /* メインカラー（青紫） */
+  --primary-dark: #5a6fd6;     /* メインカラーの暗いバージョン（ホバー・押下時） */
+  --secondary: #764ba2;        /* グラデーション終端色（紫） */
+  --bg: #f0f2f5;               /* アプリ背景色 */
+  --white: #ffffff;            /* カード・バブル背景色 */
+  --text: #1a1a2e;             /* メインテキスト色 */
+  --text-light: #6b7280;       /* サブテキスト・説明文の色 */
+  --border: #e5e7eb;           /* ボーダー・区切り線の色 */
+  --bubble-mine: #667eea;      /* 自分のチャットバブル色（青紫） */
+  --bubble-peer: #ffffff;      /* 相手のチャットバブル色（白） */
+
+  /* iPhone のノッチ・ダイナミックアイランド・ホームバー対応 */
+  /* env() は iOS Safari が提供するセーフエリアの内側余白 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* html・body を画面全体に広げ、スクロールを無効化 */
+/* overflow: hidden で各画面がはみ出さないようにする */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  /* iOS ネイティブに近いフォントスタック */
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  /* iOS でフォントが自動拡大されるのを防ぐ */
+  -webkit-text-size-adjust: 100%;
+  /* タップ時の青いハイライトを非表示 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =====================================================================
+ * 画面（スクリーン）管理
+ *
+ * 各画面は .screen クラスを持ち、通常は display: none で非表示。
+ * アクティブな画面だけ .active クラスが付与され display: flex になる。
+ * JavaScript の showScreen() で付け替えを行う。
+ * ===================================================================== */
+.screen {
+  display: none;          /* デフォルトは非表示 */
+  position: fixed;        /* 画面全体を覆う固定配置 */
+  inset: 0;               /* top/right/bottom/left すべて 0 */
+  flex-direction: column; /* 縦方向にレイアウト */
+  background: var(--bg);
+}
+
+/* アクティブな画面のみ表示 */
+.screen.active {
+  display: flex;
+}
+
+/* =====================================================================
+ * ホーム画面
+ * ===================================================================== */
+
+/* ホーム画面のコンテンツを縦中央に配置するコンテナ */
+.home-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* 水平方向: 中央 */
+  justify-content: center;  /* 垂直方向: 中央 */
+  padding: 24px;
+  /* ノッチ分だけ上部余白を追加 */
+  padding-top: calc(24px + var(--safe-top));
+}
+
+/* アプリロゴ画像のコンテナ */
+.app-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+  border-radius: 20px;     /* iOS アプリアイコン風の角丸 */
+  overflow: hidden;
+  /* 浮き上がって見えるドロップシャドウ */
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+.app-logo img {
+  width: 100%;
+  height: 100%;
+}
+
+/* アプリタイトル: グラデーションテキスト */
+.app-title {
+  font-size: 28px;
+  font-weight: 700;
+  /* primary → secondary のグラデーションを文字に適用 */
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+/* アプリ説明文 */
+.app-desc {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+
+/* ホーム画面のボタングループ */
+.home-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 320px;  /* 幅広すぎないよう上限を設ける */
+}
+
+/* =====================================================================
+ * 共通ボタン
+ * ===================================================================== */
+
+/* 基本ボタンスタイル */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  /* タップ時のアニメーション設定 */
+  transition: transform 0.15s, box-shadow 0.15s;
+  /* iOS Safari でデフォルトスタイルをリセット */
+  -webkit-appearance: none;
+}
+
+/* タップ時に少し縮む（押した感を演出） */
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* プライマリボタン: グラデーション背景 */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+/* セカンダリボタン: 白背景・ボーダー */
+.btn-secondary {
+  background: var(--white);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
+}
+
+/* ボタン内アイコン文字のサイズ */
+.btn-icon {
+  font-size: 20px;
+}
+
+/* ホーム画面下部のヒントテキスト */
+.home-hint {
+  margin-top: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* =====================================================================
+ * 画面ヘッダー（QR表示・スキャン画面共通）
+ * ===================================================================== */
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  /* ノッチ分の余白を上部に追加 */
+  padding-top: calc(16px + var(--safe-top));
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+
+.screen-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* 戻るボタン（← 矢印） */
+.btn-back {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--primary);
+  padding: 4px 8px;
+  -webkit-appearance: none;
+}
+
+/* =====================================================================
+ * QRコード表示画面
+ * ===================================================================== */
+
+/* QRコードと説明文を縦中央に配置するコンテナ */
+.qr-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 20px;
+}
+
+/* QRコード上部の説明文 */
+.qr-instruction {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* QRコード（Canvas）を囲むカード */
+.qr-code-area {
+  background: var(--white);
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* QRCode.js が生成する Canvas のサイズを強制指定 */
+.qr-code-area canvas {
+  display: block;
+  width: 220px !important;
+  height: 220px !important;
+}
+
+/* 接続状態テキスト（「接続待機中...」など） */
+.status-text {
+  font-size: 14px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* くるくる回るローディングスピナー */
+.loader {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);  /* 上部だけ色を付けて回転させる */
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ローダーを非表示にするクラス */
+.loader.hidden {
+  display: none;
+}
+
+/* スピナー回転アニメーション */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =====================================================================
+ * QRコードスキャン画面
+ * ===================================================================== */
+
+/* スキャン画面のコンテンツコンテナ */
+.scan-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 16px;
+}
+
+/* スキャン画面の説明文 */
+.scan-instruction {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* html5-qrcode が生成するカメラプレビューのコンテナ */
+.qr-reader-area {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 16px;
+  overflow: hidden;  /* 角丸からはみ出す video 要素をクリップ */
+}
+
+/* html5-qrcode が生成する video 要素にも角丸を適用 */
+#qr-reader video {
+  border-radius: 16px;
+}
+
+/* =====================================================================
+ * QRスキャン フォールバックUI
+ * カメラのリアルタイムスキャン（getUserMedia）が使えない場合に表示される。
+ * iOS PWA スタンドアロンモードでは getUserMedia が制限されるため、
+ * ネイティブカメラで撮影 → 画像からQRコードをデコードする方式に切り替える。
+ * ===================================================================== */
+
+.scan-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  margin-top: 16px;
+  background: var(--white);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 320px;
+}
+
+/* カメラアイコン（大きめに表示） */
+.scan-fallback-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+/* 「カメラへのアクセスが必要です」タイトル */
+.scan-fallback-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+/* 許可手順を囲むコンテナ */
+.scan-fallback-steps {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px;
+  width: 100%;
+}
+
+.scan-fallback-text {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+/* カメラ許可の手順リスト（番号付き） */
+.scan-permission-guide {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 2;
+  color: var(--text);
+}
+
+.scan-permission-guide strong {
+  color: var(--primary);
+}
+
+/* 「または」の区切り線 */
+.scan-fallback-divider {
+  font-size: 12px;
+  color: var(--text-light);
+  position: relative;
+  width: 100%;
+  text-align: center;
+}
+
+.scan-fallback-divider::before,
+.scan-fallback-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 35%;
+  height: 1px;
+  background: var(--border);
+}
+
+.scan-fallback-divider::before {
+  left: 0;
+}
+
+.scan-fallback-divider::after {
+  right: 0;
+}
+
+.scan-fallback-btn {
+  width: 100%;
+}
+
+/* =====================================================================
+ * チャット画面
+ * ===================================================================== */
+
+/* チャット画面のヘッダーバー */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  /* ノッチ分の余白 */
+  padding-top: calc(12px + var(--safe-top));
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 相手の名前と接続状態を縦に並べるコンテナ */
+.chat-header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 相手の名前（ヘッダー） */
+.chat-peer-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 接続状態インジケーター（「接続中」など） */
+.chat-status {
+  font-size: 12px;
+  color: #22c55e;   /* 緑色（接続中） */
+  font-weight: 500;
+}
+
+/* =====================================================================
+ * メッセージ一覧エリア
+ * ===================================================================== */
+
+/* メッセージリストのスクロール可能コンテナ */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;   /* 縦スクロール有効 */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* iOS Safari でのスクロールを滑らかにする */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* =====================================================================
+ * チャットバブル（メッセージ吹き出し）
+ * ===================================================================== */
+
+/* 共通バブルスタイル */
+.msg {
+  max-width: 78%;        /* 画面幅の78%まで */
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.45;
+  word-wrap: break-word; /* 長い単語も折り返す */
+  position: relative;
+}
+
+/* 自分のメッセージ: 右側・青紫 */
+.msg-mine {
+  align-self: flex-end;              /* 右寄せ */
+  background: var(--bubble-mine);
+  color: white;
+  border-bottom-right-radius: 6px;  /* 右下だけ角丸を小さくしてしっぽ風に */
+}
+
+/* 相手のメッセージ: 左側・白 */
+.msg-peer {
+  align-self: flex-start;           /* 左寄せ */
+  background: var(--bubble-peer);
+  color: var(--text);
+  border-bottom-left-radius: 6px;   /* 左下だけ角丸を小さく */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* メッセージ内の送信時刻 */
+.msg-time {
+  display: block;
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.6;  /* 少し透明にして主張を抑える */
+}
+
+/* 画像メッセージバブル（padding を小さくして画像を大きく見せる） */
+.msg-image {
+  padding: 4px;
+}
+
+/* 画像メッセージ内の img 要素 */
+.msg-image img {
+  display: block;
+  max-width: 240px;
+  max-height: 300px;
+  border-radius: 14px;   /* バブルと同じ丸みをつける */
+  cursor: pointer;       /* タップできることを示す */
+  object-fit: cover;     /* アスペクト比を保ちながらトリミング */
+}
+
+/* システムメッセージ（接続通知・切断通知） */
+.msg-system {
+  align-self: center;                      /* 水平中央 */
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-light);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  max-width: 90%;
+  text-align: center;
+}
+
+/* =====================================================================
+ * チャット入力エリア（下部固定バー）
+ * ===================================================================== */
+
+/* 入力エリア全体のコンテナ */
+.chat-input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  /* ホームバー（iPhone X以降）分の余白 */
+  padding-bottom: calc(10px + var(--safe-bottom));
+  background: var(--white);
+  border-top: 1px solid var(--border);
+}
+
+/* 画像添付ボタン（label でファイル入力を開く） */
+.btn-attach {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;  /* flex で縮まないよう固定 */
+}
+
+/* タップ時の背景フラッシュ */
+.btn-attach:active {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+/* テキスト入力フィールド */
+.chat-text-input {
+  flex: 1;  /* 残りのスペースをすべて使う */
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;  /* 丸型の入力欄 */
+  font-size: 15px;
+  outline: none;
+  background: var(--bg);
+  /* 文字色を明示的に指定（ダークモードで黒文字のまま見えなくなるのを防ぐ） */
+  color: var(--text);
+  /* iOS Safari でデフォルトスタイルをリセット */
+  -webkit-appearance: none;
+}
+
+/* プレースホルダー文字色（ダークモードでも視認できるよう明示指定） */
+.chat-text-input::placeholder {
+  color: var(--text-light);
+  opacity: 1; /* Firefox は opacity を下げるのでリセット */
+}
+
+/* フォーカス時にボーダーをアクセントカラーに変える */
+.chat-text-input:focus {
+  border-color: var(--primary);
+}
+
+/* 送信ボタン（丸型・青紫） */
+.btn-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+}
+
+/* 押下時に少し暗くする */
+.btn-send:active {
+  background: var(--primary-dark);
+}
+
+/* =====================================================================
+ * 画像フルスクリーンモーダル
+ * ===================================================================== */
+
+/* モーダルの背景オーバーレイ */
+.image-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);  /* ほぼ黒い半透明背景 */
+  z-index: 1000;                     /* 最前面に表示 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 閉じるボタンを右上に配置するコンテナ */
+.image-modal-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 16px;
+  /* ノッチを避ける余白 */
+  padding-top: calc(16px + var(--safe-top));
+}
+
+/* × 閉じるボタン */
+.btn-modal-close {
+  background: rgba(255, 255, 255, 0.2);  /* 半透明白 */
+  border: none;
+  color: white;
+  font-size: 28px;
+  width: 44px;   /* タップしやすい最小サイズ（Apple HIG推奨: 44pt） */
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+/* モーダル内の拡大画像 */
+.modal-image {
+  max-width: 95%;
+  max-height: 85vh;       /* ビューポートの85%を上限にする */
+  object-fit: contain;    /* アスペクト比を維持しながら収める */
+  border-radius: 8px;
+}
+
+/* =====================================================================
+ * ダークモード対応
+ * OS の外観設定（ダークモード）に合わせて色変数を上書きする。
+ *
+ * 注意: チャット入力欄の文字色は .chat-text-input で color: var(--text) を
+ * 明示指定している。iOS Safari はダークモードでもフォーム要素の文字色を
+ * デフォルト（黒）のまま変更しないため、明示指定がないと暗い背景に
+ * 黒い文字となり視認できなくなる。プレースホルダーも同様に
+ * ::placeholder で color: var(--text-light) を明示指定している。
+ * ===================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1117;           /* 暗い背景 */
+    --white: #1c1e26;        /* カード背景（暗め） */
+    --text: #e5e7eb;         /* テキスト（明るめ）→ 入力欄文字色にも適用される */
+    --text-light: #9ca3af;   /* サブテキスト → プレースホルダー色にも適用される */
+    --border: #2d3039;       /* ボーダー（暗め） */
+    --bubble-peer: #1c1e26;  /* 相手のバブル（ダーク） */
+    /* --primary と --bubble-mine は変更しない（ブランドカラーを維持） */
+  }
+}
